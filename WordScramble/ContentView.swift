@@ -4,8 +4,6 @@
 //
 //  Created by Dr Cpt Blackbeard on 6/13/23.
 //
-//If a guard check fails we must always exit the current scope.
-//That scope is usually a method, but it could also be a loop or a condition.
 
 import SwiftUI
 
@@ -13,6 +11,7 @@ struct ContentView: View {
     @State private var usedWords = [String]()
     @State private var rootWord = ""
     @State private var newWord = ""
+    @State private var totalScore = 0
     
     @State private var showingError = false
     @State private var errorTitle = ""
@@ -21,20 +20,20 @@ struct ContentView: View {
     var body: some View {
         NavigationView {
             List {
-                VStack {
+                Section {
                     TextField("Enter your word", text: $newWord)
                         .border(showingError ? .red : .clear)
                         .autocapitalization(.none)
+                    
+                    Text("Score: \(totalScore)")
+                        .monospaced()
                 }
                 
                 Section {
-                    // used self because every word is unique
                     ForEach(usedWords, id: \.self) { word in
                         HStack {
                             Text(word)
-                            
-                            // Count and display number of non-whitespace characters
-                            Image(systemName: "\(countCharacters(in: word)).circle.fill")
+                            Image(systemName: "\(word.count).circle.fill")
                         }
                     }
                 }
@@ -47,21 +46,31 @@ struct ContentView: View {
             } message: {
                 Text(errorMessage)
             }
+            .toolbar {
+                Button("Restart", action: startGame)
+            }
         }
     }
     
     func addNewWord() {
         // Lower case and remove all white spaces from user input
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        showingError = false
         
-        // Must have at least 1 letter of input
-        // (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
-        guard answer.count > 0 else { return }
+        // Must have a minmum set of characters for input
+        guard isMinLength(word: answer, minLength: 3) else {
+            wordError(title: "Word is too short", message: "Use at least \(3) letters.")
+            return
+        }
+        
+        // Can't use our starting word/root word
+        guard isRootWord(word: answer) else {
+            wordError(title: "Word matches root word", message: "Using the root word doesn't make this much of a word 'scramble' does it?")
+            return
+        }
         
         // Must not be a duplicate guess
         guard isOriginal(word: answer) else {
-            wordError(title: "Word used already", message: "Be more original")
+            wordError(title: "Word used already", message: "Be more original.")
             return
         }
         
@@ -82,33 +91,36 @@ struct ContentView: View {
             usedWords.insert(answer, at: 0)
         }
         
+        // Add to score total
+        totalScore += answer.count
+        
         // Reset new word
         newWord = ""
-    }
-    
-    func countCharacters(in word: String) -> Int {
-        // Don't count white spaces
-        let numOfWhiteSpace = word.filter { $0 == " "}.count
-        return word.count - numOfWhiteSpace
+        totalScore = 0
     }
     
     func startGame() {
         // Ask iOS where our start.txt file is located and assign the URL of the file to startFileURL
         if let startFileURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
-
-            // Attempt to load the content of the file at the URL startFileURL into a String object.
-            // If it's successful, it assigns the content of the file (as a String) to startWords.
+            
             if let startWords = try? String(contentsOf: startFileURL) {
                 let allWords = startWords.components(separatedBy: "\n")
-
-                // randomElement return an optional string, because it might be an empty array
-                // but rootWord is a non-optional string so we need to nil coalescing and provide a default of 'silkworm' in the rare case we load an empty file.
+                usedWords = []
                 rootWord = allWords.randomElement() ?? "silkworm"
                 return
             }
         }
-        // If were are *here* then there was a problem – trigger a crash and report the error
         fatalError("Could not load start.txt from bundle.")
+    }
+    
+    // Check for minimum length
+    func isMinLength(word: String, minLength: Int) -> Bool {
+        return word.count >= minLength
+    }
+    
+    // Check for root word as user answer
+    func isRootWord(word: String) -> Bool {
+        return word != rootWord
     }
     
     // Check for duplicates
@@ -137,7 +149,6 @@ struct ContentView: View {
         // range over our range for misspelled words
         let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: wordRange, startingAt: 0, wrap: false, language: "en")
         
-        // If true, then it was a real word - otherwise their was a misspelled word, so return false
         return misspelledRange.location == NSNotFound
     }
     
