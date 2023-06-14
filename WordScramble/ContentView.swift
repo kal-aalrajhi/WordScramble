@@ -4,6 +4,8 @@
 //
 //  Created by Dr Cpt Blackbeard on 6/13/23.
 //
+//If a guard check fails we must always exit the current scope.
+//That scope is usually a method, but it could also be a loop or a condition.
 
 import SwiftUI
 
@@ -12,25 +14,9 @@ struct ContentView: View {
     @State private var rootWord = ""
     @State private var newWord = ""
     
-//    @State private var showingError = false
-//    @State private var errorText = ""
-    
     @State private var showingError = false
     @State private var errorTitle = ""
     @State private var errorMessage = ""
-    
-    // Calculated property
-//    var errorMessage: some View {
-//        if showingError {
-//            return AnyView(Text(errorText)
-//                .foregroundColor(.red)
-//                .font(.subheadline)
-//                .frame(maxWidth: .infinity, alignment: .leading)
-//                )
-//        } else {
-//            return AnyView(EmptyView())
-//        }
-//    }
     
     var body: some View {
         NavigationView {
@@ -39,8 +25,6 @@ struct ContentView: View {
                     TextField("Enter your word", text: $newWord)
                         .border(showingError ? .red : .clear)
                         .autocapitalization(.none)
-                    
-//                    errorMessage
                 }
                 
                 Section {
@@ -57,6 +41,7 @@ struct ContentView: View {
             }
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
+            .onAppear(perform: startGame)
             .alert(errorTitle, isPresented: $showingError) {
                 Button("OK", role: .cancel) {}
             } message: {
@@ -69,23 +54,24 @@ struct ContentView: View {
         // Lower case and remove all white spaces from user input
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
         showingError = false
-        // Must have at least 1 letter of input (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
-        guard answer.count > 0 else {
-//            showingError = true
-//            errorText = "Please provide at least one letter."
-            return
-        }
         
+        // Must have at least 1 letter of input
+        // (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
+        guard answer.count > 0 else { return }
+        
+        // Must not be a duplicate guess
         guard isOriginal(word: answer) else {
             wordError(title: "Word used already", message: "Be more original")
             return
         }
         
+        // Must have correct letters from word
         guard isPossible(word: answer) else {
             wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
             return
         }
         
+        // Must be an actual word
         guard isReal(word: answer) else {
             wordError(title: "Word not recognized", message: "You can't just make them up, you know!")
             return
@@ -125,10 +111,12 @@ struct ContentView: View {
         fatalError("Could not load start.txt from bundle.")
     }
     
+    // Check for duplicates
     func isOriginal(word: String) -> Bool {
         !usedWords.contains(word)
     }
     
+    // Check for words that exist
     func isPossible(word: String) -> Bool {
         var tempWord = rootWord
         for letter in word {
