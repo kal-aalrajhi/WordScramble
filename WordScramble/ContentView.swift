@@ -4,6 +4,8 @@
 //
 //  Created by Dr Cpt Blackbeard on 6/13/23.
 //
+//If a guard check fails we must always exit the current scope.
+//That scope is usually a method, but it could also be a loop or a condition.
 
 import SwiftUI
 
@@ -11,31 +13,18 @@ struct ContentView: View {
     @State private var usedWords = [String]()
     @State private var rootWord = ""
     @State private var newWord = ""
-    @State private var showError = false
-    @State private var errorText = ""
     
-    // Calculated property
-    var errorMessage: some View {
-        if showError {
-            return AnyView(Text(errorText)
-                .foregroundColor(.red)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                )
-        } else {
-            return AnyView(EmptyView())
-        }
-    }
+    @State private var showingError = false
+    @State private var errorTitle = ""
+    @State private var errorMessage = ""
     
     var body: some View {
         NavigationView {
             List {
                 VStack {
                     TextField("Enter your word", text: $newWord)
-                        .border(showError ? .red : .clear)
+                        .border(showingError ? .red : .clear)
                         .autocapitalization(.none)
-                    
-                    errorMessage
                 }
                 
                 Section {
@@ -52,21 +41,41 @@ struct ContentView: View {
             }
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
+            .onAppear(perform: startGame)
+            .alert(errorTitle, isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
     func addNewWord() {
         // Lower case and remove all white spaces from user input
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        showError = false
-        // Must have at least 1 letter of input (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
-        guard answer.count > 0 else {
-            showError = true
-            errorText = "Please provide at least one letter."
+        showingError = false
+        
+        // Must have at least 1 letter of input
+        // (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
+        guard answer.count > 0 else { return }
+        
+        // Must not be a duplicate guess
+        guard isOriginal(word: answer) else {
+            wordError(title: "Word used already", message: "Be more original")
             return
         }
         
-        //Extra validation to come
+        // Must have correct letters from word
+        guard isPossible(word: answer) else {
+            wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
+            return
+        }
+        
+        // Must be an actual word
+        guard isReal(word: answer) else {
+            wordError(title: "Word not recognized", message: "You can't just make them up, you know!")
+            return
+        }
         
         // Add new word to usedWords array
         withAnimation {
@@ -100,6 +109,42 @@ struct ContentView: View {
         }
         // If were are *here* then there was a problem – trigger a crash and report the error
         fatalError("Could not load start.txt from bundle.")
+    }
+    
+    // Check for duplicates
+    func isOriginal(word: String) -> Bool {
+        !usedWords.contains(word)
+    }
+    
+    // Check for words that exist
+    func isPossible(word: String) -> Bool {
+        var tempWord = rootWord
+        for letter in word {
+            if let position = tempWord.firstIndex(of: letter) {
+                tempWord.remove(at: position)
+            } else {
+                return false
+            }
+        }
+        return true
+    }
+    
+    // Check for mispelled words
+    func isReal(word: String) -> Bool {
+        let checker = UITextChecker()
+        // check the range of our entire word
+        let wordRange = NSRange(location: 0, length: word.utf16.count)
+        // range over our range for misspelled words
+        let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: wordRange, startingAt: 0, wrap: false, language: "en")
+        
+        // If true, then it was a real word - otherwise their was a misspelled word, so return false
+        return misspelledRange.location == NSNotFound
+    }
+    
+    func wordError(title: String, message: String) {
+        errorTitle = title
+        errorMessage = message
+        showingError = true
     }
 }
 
