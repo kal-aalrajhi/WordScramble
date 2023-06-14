@@ -32,8 +32,7 @@ struct ContentView: View {
                     ForEach(usedWords, id: \.self) { word in
                         HStack {
                             Text(word)
-                            
-                            // Count and display number of non-whitespace characters
+
                             Image(systemName: "\(countCharacters(in: word)).circle.fill")
                         }
                     }
@@ -53,15 +52,22 @@ struct ContentView: View {
     func addNewWord() {
         // Lower case and remove all white spaces from user input
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        showingError = false
         
-        // Must have at least 1 letter of input
-        // (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
-        guard answer.count > 0 else { return }
+        // Must have a minmum set of characters for input
+        guard isMinLength(word: answer, minLength: 3) else {
+            wordError(title: "Word is too short", message: "Use at least \(3) letters.")
+            return
+        }
+        
+        // Can't use our starting word/root word
+        guard isRootWord(word: answer) else {
+            wordError(title: "Word matches root word", message: "Using the root word doesn't make this much of a word 'scramble' does it?")
+            return
+        }
         
         // Must not be a duplicate guess
         guard isOriginal(word: answer) else {
-            wordError(title: "Word used already", message: "Be more original")
+            wordError(title: "Word used already", message: "Be more original.")
             return
         }
         
@@ -98,7 +104,8 @@ struct ContentView: View {
 
             // Attempt to load the content of the file at the URL startFileURL into a String object.
             // If it's successful, it assigns the content of the file (as a String) to startWords.
-            if let startWords = try? String(contentsOf: startFileURL) {
+            // Throwing functions are those that will flag up errors if problems happen, and Swift requires you to handle those errors in your code.
+            if let startWords = try? String(contentsOf: startFileURL) { // String(contentsOf:) is a throwing function, so use it carefully.
                 let allWords = startWords.components(separatedBy: "\n")
 
                 // randomElement return an optional string, because it might be an empty array
@@ -109,6 +116,17 @@ struct ContentView: View {
         }
         // If were are *here* then there was a problem – trigger a crash and report the error
         fatalError("Could not load start.txt from bundle.")
+    }
+    
+    // Check for minimum length
+    func isMinLength(word: String, minLength: Int) -> Bool {
+        // Must have at least 3 letters of input
+        return word.count >= minLength
+    }
+    
+    // Check for root word as user answer
+    func isRootWord(word: String) -> Bool {
+        return word != rootWord
     }
     
     // Check for duplicates
@@ -131,6 +149,7 @@ struct ContentView: View {
     
     // Check for mispelled words
     func isReal(word: String) -> Bool {
+        // UITextChecker uses the built-in system dictionary, so we don't need to provide any words
         let checker = UITextChecker()
         // check the range of our entire word
         let wordRange = NSRange(location: 0, length: word.utf16.count)
