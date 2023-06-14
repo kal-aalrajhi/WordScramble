@@ -117,6 +117,18 @@ struct ContentView: View {
         }
         return true
     }
+    
+    // Check for mispelled words
+    func isReal(word: String) -> Bool {
+        let checker = UITextChecker()
+        // check the range of our entire word
+        let wordRange = NSRange(location: 0, length: word.utf16.count)
+        // range over our range for misspelled words
+        let misspelledRange = checker.rangeOfMisspelledWord(in: word, range: wordRange, startingAt: 0, wrap: false, language: "en")
+        
+        // If true, then it was a real word - otherwise their was a misspelled word, so return false
+        return misspelledRange.location == NSNotFound
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {
