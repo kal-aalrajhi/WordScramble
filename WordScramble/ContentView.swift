@@ -110,7 +110,7 @@ struct ContentView: View {
             // Throwing functions are those that will flag up errors if problems happen, and Swift requires you to handle those errors in your code.
             if let startWords = try? String(contentsOf: startFileURL) { // String(contentsOf:) is a throwing function, so use it carefully.
                 let allWords = startWords.components(separatedBy: "\n")
-
+                usedWords = []
                 // randomElement return an optional string, because it might be an empty array
                 // but rootWord is a non-optional string so we need to nil coalescing and provide a default of 'silkworm' in the rare case we load an empty file.
                 rootWord = allWords.randomElement() ?? "silkworm"
