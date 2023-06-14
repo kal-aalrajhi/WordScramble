@@ -101,6 +101,11 @@ struct ContentView: View {
         // If were are *here* then there was a problem – trigger a crash and report the error
         fatalError("Could not load start.txt from bundle.")
     }
+    
+    func isOriginal(word: String) -> Bool {
+        !usedWords.contains(word)
+    }
+    
 }
 
 struct ContentView_Previews: PreviewProvider {
