@@ -41,7 +41,12 @@ struct ContentView: View {
                 Section {
                     // used self because every word is unique
                     ForEach(usedWords, id: \.self) { word in
-                        Text(word)
+                        HStack {
+                            Text(word)
+                            
+                            // Count and display number of non-whitespace characters
+                            Image(systemName: "\(countCharacters(in: word)).circle.fill")
+                        }
                     }
                 }
             }
@@ -61,14 +66,22 @@ struct ContentView: View {
             return
         }
         
-        //Extra valudation to come
+        //Extra validation to come
         
         // Add new word to usedWords array
-        usedWords.insert(answer, at: 0)
+        withAnimation {
+            usedWords.insert(answer, at: 0)
+        }
         
         // Reset new word
         newWord = ""
     }
+}
+
+func countCharacters(in word: String) -> Int {
+    // Don't count white spaces
+    let numOfWhiteSpace = word.filter { $0 == " "}.count
+    return word.count - numOfWhiteSpace
 }
 
 struct ContentView_Previews: PreviewProvider {
