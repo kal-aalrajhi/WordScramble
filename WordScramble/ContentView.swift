@@ -12,7 +12,7 @@ struct ContentView: View {
     @State private var rootWord = ""
     @State private var newWord = ""
     @State private var showError = false
-    @State private var errorText = "sdfhjgdfkjhgsdk"
+    @State private var errorText = ""
     
     // Calculated property
     var errorMessage: some View {
@@ -76,12 +76,31 @@ struct ContentView: View {
         // Reset new word
         newWord = ""
     }
-}
+    
+    func countCharacters(in word: String) -> Int {
+        // Don't count white spaces
+        let numOfWhiteSpace = word.filter { $0 == " "}.count
+        return word.count - numOfWhiteSpace
+    }
+    
+    func startGame() {
+        // Ask iOS where our start.txt file is located and assign the URL of the file to startFileURL
+        if let startFileURL = Bundle.main.url(forResource: "start", withExtension: "txt") {
 
-func countCharacters(in word: String) -> Int {
-    // Don't count white spaces
-    let numOfWhiteSpace = word.filter { $0 == " "}.count
-    return word.count - numOfWhiteSpace
+            // Attempt to load the content of the file at the URL startFileURL into a String object.
+            // If it's successful, it assigns the content of the file (as a String) to startWords.
+            if let startWords = try? String(contentsOf: startFileURL) {
+                let allWords = startWords.components(separatedBy: "\n")
+
+                // randomElement return an optional string, because it might be an empty array
+                // but rootWord is a non-optional string so we need to nil coalescing and provide a default of 'silkworm' in the rare case we load an empty file.
+                rootWord = allWords.randomElement() ?? "silkworm"
+                return
+            }
+        }
+        // If were are *here* then there was a problem – trigger a crash and report the error
+        fatalError("Could not load start.txt from bundle.")
+    }
 }
 
 struct ContentView_Previews: PreviewProvider {
