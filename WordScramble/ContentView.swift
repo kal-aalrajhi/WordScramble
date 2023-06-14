@@ -11,31 +11,36 @@ struct ContentView: View {
     @State private var usedWords = [String]()
     @State private var rootWord = ""
     @State private var newWord = ""
-    @State private var showError = false
-    @State private var errorText = ""
+    
+//    @State private var showingError = false
+//    @State private var errorText = ""
+    
+    @State private var showingError = false
+    @State private var errorTitle = ""
+    @State private var errorMessage = ""
     
     // Calculated property
-    var errorMessage: some View {
-        if showError {
-            return AnyView(Text(errorText)
-                .foregroundColor(.red)
-                .font(.subheadline)
-                .frame(maxWidth: .infinity, alignment: .leading)
-                )
-        } else {
-            return AnyView(EmptyView())
-        }
-    }
+//    var errorMessage: some View {
+//        if showingError {
+//            return AnyView(Text(errorText)
+//                .foregroundColor(.red)
+//                .font(.subheadline)
+//                .frame(maxWidth: .infinity, alignment: .leading)
+//                )
+//        } else {
+//            return AnyView(EmptyView())
+//        }
+//    }
     
     var body: some View {
         NavigationView {
             List {
                 VStack {
                     TextField("Enter your word", text: $newWord)
-                        .border(showError ? .red : .clear)
+                        .border(showingError ? .red : .clear)
                         .autocapitalization(.none)
                     
-                    errorMessage
+//                    errorMessage
                 }
                 
                 Section {
@@ -52,21 +57,39 @@ struct ContentView: View {
             }
             .navigationTitle(rootWord)
             .onSubmit(addNewWord)
+            .alert(errorTitle, isPresented: $showingError) {
+                Button("OK", role: .cancel) {}
+            } message: {
+                Text(errorMessage)
+            }
         }
     }
     
     func addNewWord() {
         // Lower case and remove all white spaces from user input
         let answer = newWord.lowercased().trimmingCharacters(in: .whitespacesAndNewlines)
-        showError = false
+        showingError = false
         // Must have at least 1 letter of input (we could use isEmpty, but this is scalable incase we wanna require a minumum of 3 or more letters
         guard answer.count > 0 else {
-            showError = true
-            errorText = "Please provide at least one letter."
+//            showingError = true
+//            errorText = "Please provide at least one letter."
             return
         }
         
-        //Extra validation to come
+        guard isOriginal(word: answer) else {
+            wordError(title: "Word used already", message: "Be more original")
+            return
+        }
+        
+        guard isPossible(word: answer) else {
+            wordError(title: "Word not possible", message: "You can't spell that word from '\(rootWord)'!")
+            return
+        }
+        
+        guard isReal(word: answer) else {
+            wordError(title: "Word not recognized", message: "You can't just make them up, you know!")
+            return
+        }
         
         // Add new word to usedWords array
         withAnimation {
@@ -128,6 +151,12 @@ struct ContentView: View {
         
         // If true, then it was a real word - otherwise their was a misspelled word, so return false
         return misspelledRange.location == NSNotFound
+    }
+    
+    func wordError(title: String, message: String) {
+        errorTitle = title
+        errorMessage = message
+        showingError = true
     }
 }
 
